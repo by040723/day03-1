@@ -55,6 +55,19 @@
   }
   .add { background: var(--orange); color: #fff; }
   .add:hover { background: var(--orange-dark); }
+  .field { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; }
+  .rating-btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .star-btn {
+    background: #fff; color: var(--muted);
+    border: 1px solid var(--line); padding: 10px 0;
+  }
+  .star-btn:hover { border-color: var(--orange); color: var(--orange-dark); }
+  .star-btn[aria-checked="true"] {
+    background: var(--orange); border-color: var(--orange); color: #fff;
+  }
+  .ai { background: var(--orange-soft); color: var(--orange-dark); }
+  .ai:hover:not(:disabled) { background: #ffe6cc; }
+  .ai:disabled { opacity: .6; cursor: wait; }
   .error { color: #c2410c; font-size: .85rem; min-height: 1.1em; margin: 0; }
 
   h2 { margin: 28px 0 12px; font-size: 1.1rem; }
@@ -87,19 +100,20 @@
         <input id="menu" maxlength="30" placeholder="예: 잔치국수">
       </label>
     </div>
-    <label>별점
-      <select id="rating" required>
-        <option value="">선택</option>
-        <option value="5">★★★★★ 5</option>
-        <option value="4">★★★★☆ 4</option>
-        <option value="3">★★★☆☆ 3</option>
-        <option value="2">★★☆☆☆ 2</option>
-        <option value="1">★☆☆☆☆ 1</option>
-      </select>
-    </label>
+    <div class="field">별점
+      <input type="hidden" id="rating" value="">
+      <div class="rating-btns" id="ratingBtns" role="radiogroup" aria-label="별점">
+        <button type="button" class="star-btn" data-v="1" role="radio" aria-checked="false">1☆</button>
+        <button type="button" class="star-btn" data-v="2" role="radio" aria-checked="false">2☆</button>
+        <button type="button" class="star-btn" data-v="3" role="radio" aria-checked="false">3☆</button>
+        <button type="button" class="star-btn" data-v="4" role="radio" aria-checked="false">4☆</button>
+        <button type="button" class="star-btn" data-v="5" role="radio" aria-checked="false">5☆</button>
+      </div>
+    </div>
     <label>한줄평
       <input id="review" maxlength="100" placeholder="한 줄로 남겨 보세요">
     </label>
+    <button type="button" id="ai" class="ai">✨ AI 한줄평 추천</button>
     <p class="error" id="error" role="alert"></p>
     <button type="submit" class="add">추가</button>
   </form>
@@ -234,6 +248,46 @@
     }
     $("form").reset();
     await refresh();
+  });
+
+  function setRating(v) {
+    $("rating").value = v ? String(v) : "";
+    for (const b of document.querySelectorAll(".star-btn")) {
+      const on = b.dataset.v === $("rating").value;
+      b.setAttribute("aria-checked", on ? "true" : "false");
+    }
+  }
+  $("ratingBtns").addEventListener("click", (e) => {
+    const b = e.target.closest(".star-btn");
+    if (b) setRating(b.dataset.v);
+  });
+  $("form").addEventListener("reset", () => setRating(""));
+
+  $("ai").addEventListener("click", async () => {
+    const err = $("error");
+    const name = $("name").value.trim();
+    if (!name) { err.textContent = "AI 추천을 받으려면 식당 이름을 먼저 입력해 주세요."; return; }
+    const btn = $("ai");
+    btn.disabled = true;
+    btn.textContent = "생각 중...";
+    err.textContent = "";
+    try {
+      const data = await call(SUPABASE_URL + "/functions/v1/ai-review", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          menu: $("menu").value.trim(),
+          rating: Number($("rating").value) || 0
+        })
+      });
+      if (!data || !data.review) throw new Error("empty");
+      $("review").value = data.review;
+    } catch (e) {
+      err.textContent = "AI 추천을 받지 못했어요. 잠시 후 다시 시도해 주세요.";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "✨ AI 한줄평 추천";
+    }
   });
 
   refresh();
