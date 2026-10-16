@@ -7,18 +7,18 @@
 <style>
   /* 역할 기반 색 토큰: 포인트는 연한 하늘색, 배경은 아주 연한 노랑 */
   :root {
-    --bg-page: #f6f2e4;
+    --bg-page: #fffef7;
     --bg-layer: #ffffff;
     --bg-fill: #f7f8f9;
-    --bg-brand-solid: #8fd0f3;
-    --bg-brand-solid-pressed: #6dbdea;
-    --bg-brand-weak: #eaf6fd;
-    --bg-brand-weak-pressed: #d8eefb;
+    --bg-brand-solid: #ff9aab;
+    --bg-brand-solid-pressed: #ff7f95;
+    --bg-brand-weak: #ffeef1;
+    --bg-brand-weak-pressed: #ffdde4;
     --fg-neutral: #1a1c20;
     --fg-neutral-muted: #555d6d;
     --fg-neutral-subtle: #868b94;
-    --fg-brand: #2b8fc6;
-    --fg-brand-contrast: #0f4c6b;
+    --fg-brand: #e23a5f;
+    --fg-brand-contrast: #8c1f3b;
     --fg-critical: #ca1d13;
     --stroke-neutral-weak: #e6e8ec;
     --stroke-focus-ring: #5e98fe;
@@ -37,6 +37,21 @@
     color: var(--fg-neutral);
   }
   .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 56px; }
+  .req { color: var(--fg-brand); font-weight: 700; margin-left: 2px; }
+  .count { color: var(--fg-brand); font-weight: 700; margin-left: 4px; }
+  .count small { color: var(--fg-neutral-subtle); font-weight: 400; font-size: 13px; }
+  .pager { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 16px; font-size: 14px; color: var(--fg-neutral-muted); }
+  .pager button { background: var(--bg-layer); border: 1px solid var(--stroke-neutral-weak); color: var(--fg-neutral-muted); padding: 8px 14px; font-size: 13px; border-radius: 999px; }
+  .pager button:hover:not(:disabled) { background: var(--bg-brand-weak); }
+  .pager button:disabled { opacity: .4; cursor: default; }
+  .pager b { color: var(--fg-brand); }
+  /* 컴퓨터 화면: 왼쪽 등록, 오른쪽 목록 */
+  @media (min-width: 900px) {
+    .wrap { max-width: 1080px; padding: 28px 24px 56px; }
+    .layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 28px; align-items: start; }
+    .pane-form { position: sticky; top: 20px; }
+    .list-head { margin-top: 0; }
+  }
   h1 { margin: 0; font-size: 22px; line-height: 30px; font-weight: 700; }
   .sub { margin: 6px 0 20px; color: var(--fg-neutral-subtle); font-size: 14px; line-height: 19px; }
 
@@ -206,16 +221,18 @@
     </div>
   </dialog>
 
+  <div class="layout">
+  <div class="pane-form">
   <form id="form" autocomplete="off">
     <div class="row">
-      <label>식당 이름
-        <input id="name" maxlength="30" placeholder="예: 할머니국수" required>
+      <label><span>식당 이름<span class="req" aria-hidden="true">*</span></span>
+        <input id="name" maxlength="30" placeholder="예: 할머니국수" required aria-required="true">
       </label>
       <label>메뉴
         <input id="menu" maxlength="30" placeholder="예: 잔치국수">
       </label>
     </div>
-    <div class="field">별점
+    <div class="field"><span>별점<span class="req" aria-hidden="true">*</span></span>
       <input type="hidden" id="rating" value="">
       <div class="rating-btns" id="ratingBtns" role="radiogroup" aria-label="별점">
         <button type="button" class="star-btn" data-v="1" role="radio" aria-checked="false">1☆</button>
@@ -232,9 +249,11 @@
     <p class="error" id="error" role="alert"></p>
     <button type="submit" class="add">추가</button>
   </form>
+  </div>
 
+  <div class="pane-list">
   <div class="list-head">
-    <h2>등록된 맛집</h2>
+    <h2>등록된 맛집 <span class="count" id="count"></span></h2>
     <button type="button" id="searchBtn" class="icon-btn" aria-label="검색" aria-expanded="false" title="검색">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
         <circle cx="11" cy="11" r="7"></circle>
@@ -247,6 +266,13 @@
     </div>
   </div>
   <ul id="list"></ul>
+  <nav class="pager" id="pager" aria-label="페이지" hidden>
+    <button type="button" id="prevPage">이전</button>
+    <span id="pageInfo"></span>
+    <button type="button" id="nextPage">다음</button>
+  </nav>
+  </div>
+  </div>
 </div>
 
 <script>
@@ -342,6 +368,8 @@
 
   const $ = (id) => document.getElementById(id);
   let items = [];
+  let page = 1;
+  const PAGE_SIZE = 6; // 한 페이지에 6개 (2열 x 3줄)
 
   async function refresh() {
     try {
@@ -359,7 +387,16 @@
     const q = $("searchInput").value.trim().toLowerCase();
     const shown = !q ? items : items.filter((r) =>
       [r.name, r.menu, r.review].some((v) => String(v || "").toLowerCase().includes(q)));
+    // 몇 개 등록됐는지 (검색 중이면 검색된 개수도 함께)
+    $("count").innerHTML = "";
+    $("count").append(items.length + "개");
+    if (q) {
+      const s = document.createElement("small");
+      s.textContent = " · 검색 " + shown.length + "개";
+      $("count").append(s);
+    }
     if (!shown.length) {
+      $("pager").hidden = true;
       const li = document.createElement("li");
       li.className = "empty";
       li.textContent = q
@@ -368,8 +405,19 @@
       list.append(li);
       return;
     }
+    // 페이지 나누기
+    const pages = Math.ceil(shown.length / PAGE_SIZE);
+    if (page > pages) page = pages;
+    if (page < 1) page = 1;
+    $("pageInfo").innerHTML = "";
+    const cur = document.createElement("b");
+    cur.textContent = page;
+    $("pageInfo").append(cur, " / " + pages + " 페이지");
+    $("prevPage").disabled = page <= 1;
+    $("nextPage").disabled = page >= pages;
+    $("pager").hidden = false;
     // 서버에서 최신순(created_at desc)으로 받아 온다
-    for (const r of shown) {
+    for (const r of shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)) {
       const li = document.createElement("li");
       li.className = "card";
 
@@ -473,6 +521,7 @@
       return;
     }
     $("form").reset();
+    page = 1; // 새 글은 맨 위(1페이지)에 보인다
     await refresh();
   });
 
@@ -531,13 +580,16 @@
     setSearchOpen($("searchPop").hidden);
   });
   $("searchPop").addEventListener("click", (e) => e.stopPropagation());
-  $("searchInput").addEventListener("input", () => { updateSearchIcon(); render(); });
+  $("searchInput").addEventListener("input", () => { updateSearchIcon(); page = 1; render(); });
+  $("prevPage").addEventListener("click", () => { page -= 1; render(); });
+  $("nextPage").addEventListener("click", () => { page += 1; render(); });
   $("searchInput").addEventListener("keydown", (e) => {
     if (e.key === "Escape" || e.key === "Enter") { e.preventDefault(); setSearchOpen(false); $("searchBtn").focus(); }
   });
   $("searchClear").addEventListener("click", () => {
     $("searchInput").value = "";
     updateSearchIcon();
+    page = 1;
     render();
     $("searchInput").focus();
   });
