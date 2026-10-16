@@ -49,8 +49,9 @@
   @media (min-width: 900px) {
     .wrap { max-width: 1080px; padding: 28px 24px 56px; }
     .layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 28px; align-items: start; }
-    .pane-form { position: sticky; top: 20px; }
-    .list-head { margin-top: 0; }
+    /* 등록 폼 카드의 윗선을 오른쪽 첫 맛집 카드의 윗선에 맞춘다
+       (제목줄 위 여백 28px + 제목줄 높이 40px + 제목줄 아래 여백 12px) */
+    .pane-form { position: sticky; top: 20px; margin-top: 80px; }
   }
   h1 { margin: 0; font-size: 22px; line-height: 30px; font-weight: 700; }
   .sub { margin: 6px 0 20px; color: var(--fg-neutral-subtle); font-size: 14px; line-height: 19px; }
@@ -134,7 +135,7 @@
   }
 
   /* 한 줄에 카드 두 장 */
-  #list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0; margin: 0; list-style: none; align-items: start; }
+  #list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0; margin: 0; list-style: none; align-items: stretch; }
   .card { padding: 14px; display: flex; flex-direction: column; min-width: 0; }
   .card-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
   .info-col { min-width: 0; }
@@ -150,8 +151,10 @@
   .del {
     background: var(--bg-fill); color: var(--fg-neutral-muted);
     padding: 6px 12px; font-size: 13px; border-radius: 999px;
-    align-self: flex-end; margin-top: 10px;
+    align-self: flex-end; margin-top: auto; /* 같은 줄 카드 높이가 같아도 삭제 버튼은 늘 맨 아래 */
   }
+  .card > .del { margin-top: auto; }
+  .card > :has(+ .del) { margin-bottom: 10px; }
   .del:hover { background: var(--bg-brand-weak); }
   .empty { grid-column: 1 / -1; text-align: center; color: var(--fg-neutral-subtle); padding: 32px 0; font-size: 14px; }
 
