@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리동네 숨은맛집</title>
+<style>
+  :root {
+    --orange: #f97316;
+    --orange-dark: #ea580c;
+    --orange-soft: #fff4e8;
+    --text: #2b2118;
+    --muted: #8a7968;
+    --line: #f0e4d6;
+    --bg: #fffaf4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { margin: 0 0 4px; font-size: 1.6rem; color: var(--orange-dark); }
+  .sub { margin: 0 0 20px; color: var(--muted); font-size: .95rem; }
+
+  form, .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(120, 70, 20, .06);
+  }
+  form { padding: 16px; display: grid; gap: 12px; }
+  label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; }
+  input, select {
+    font: inherit; font-weight: 400;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--text);
+    width: 100%;
+  }
+  input:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 1px;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+
+  button {
+    font: inherit; font-weight: 600; cursor: pointer;
+    border: 0; border-radius: 10px; padding: 11px 16px;
+  }
+  .add { background: var(--orange); color: #fff; }
+  .add:hover { background: var(--orange-dark); }
+  .error { color: #c2410c; font-size: .85rem; min-height: 1.1em; margin: 0; }
+
+  h2 { margin: 28px 0 12px; font-size: 1.1rem; }
+  #list { display: grid; gap: 12px; padding: 0; margin: 0; list-style: none; }
+  .card { padding: 14px 16px; }
+  .card-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .name { font-size: 1.1rem; font-weight: 700; margin: 0; word-break: break-word; }
+  .menu { color: var(--muted); font-size: .9rem; margin: 2px 0 0; word-break: break-word; }
+  .stars { color: var(--orange); letter-spacing: 1px; margin: 8px 0 0; }
+  .review { margin: 6px 0 0; word-break: break-word; }
+  .del {
+    background: var(--orange-soft); color: var(--orange-dark);
+    padding: 6px 12px; font-size: .85rem; flex-shrink: 0;
+  }
+  .del:hover { background: #ffe6cc; }
+  .empty { text-align: center; color: var(--muted); padding: 32px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🍜 우리동네 숨은맛집</h1>
+  <p class="sub">가본 맛집을 기록해 두세요.</p>
+
+  <form id="form" autocomplete="off">
+    <div class="row">
+      <label>식당 이름
+        <input id="name" maxlength="30" placeholder="예: 할머니국수" required>
+      </label>
+      <label>메뉴
+        <input id="menu" maxlength="30" placeholder="예: 잔치국수">
+      </label>
+    </div>
+    <label>별점
+      <select id="rating" required>
+        <option value="">선택</option>
+        <option value="5">★★★★★ 5</option>
+        <option value="4">★★★★☆ 4</option>
+        <option value="3">★★★☆☆ 3</option>
+        <option value="2">★★☆☆☆ 2</option>
+        <option value="1">★☆☆☆☆ 1</option>
+      </select>
+    </label>
+    <label>한줄평
+      <input id="review" maxlength="100" placeholder="한 줄로 남겨 보세요">
+    </label>
+    <p class="error" id="error" role="alert"></p>
+    <button type="submit" class="add">추가</button>
+  </form>
+
+  <h2>등록된 맛집</h2>
+  <ul id="list"></ul>
+</div>
+
+<script>
+  // 저장소 계층: 2단계에서 이 부분만 Supabase로 교체한다.
+  const KEY = "restaurants";
+  const store = {
+    load() {
+      try {
+        const data = JSON.parse(localStorage.getItem(KEY));
+        return Array.isArray(data) ? data : [];
+      } catch { return []; }
+    },
+    save(items) {
+      localStorage.setItem(KEY, JSON.stringify(items));
+    }
+  };
+
+  const $ = (id) => document.getElementById(id);
+  let items = store.load();
+
+  function render() {
+    const list = $("list");
+    list.replaceChildren();
+    if (!items.length) {
+      const li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = "아직 등록된 맛집이 없어요. 첫 맛집을 추가해 보세요!";
+      list.append(li);
+      return;
+    }
+    // 새 기록이 맨 위
+    const sorted = [...items].sort((a, b) => b.created_at - a.created_at);
+    for (const r of sorted) {
+      const li = document.createElement("li");
+      li.className = "card";
+
+      const top = document.createElement("div");
+      top.className = "card-top";
+      const info = document.createElement("div");
+      const name = document.createElement("p");
+      name.className = "name";
+      name.textContent = r.name;
+      info.append(name);
+      if (r.menu) {
+        const menu = document.createElement("p");
+        menu.className = "menu";
+        menu.textContent = r.menu;
+        info.append(menu);
+      }
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "del";
+      del.textContent = "삭제";
+      del.addEventListener("click", () => remove(r.id));
+      top.append(info, del);
+
+      const stars = document.createElement("p");
+      stars.className = "stars";
+      stars.textContent = "★".repeat(r.rating) + "☆".repeat(5 - r.rating);
+      stars.setAttribute("aria-label", "별점 " + r.rating + "점");
+
+      li.append(top, stars);
+      if (r.review) {
+        const review = document.createElement("p");
+        review.className = "review";
+        review.textContent = r.review;
+        li.append(review);
+      }
+      list.append(li);
+    }
+  }
+
+  function remove(id) {
+    items = items.filter((r) => r.id !== id);
+    store.save(items);
+    render();
+  }
+
+  $("form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = $("name").value.trim();
+    const menu = $("menu").value.trim();
+    const rating = Number($("rating").value);
+    const review = $("review").value.trim();
+    const err = $("error");
+
+    if (!name) return (err.textContent = "식당 이름을 입력해 주세요.");
+    if (name.length > 30) return (err.textContent = "식당 이름은 30자 이하로 입력해 주세요.");
+    if (menu.length > 30) return (err.textContent = "메뉴는 30자 이하로 입력해 주세요.");
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5)
+      return (err.textContent = "별점을 선택해 주세요.");
+    if (review.length > 100) return (err.textContent = "한줄평은 100자 이하로 입력해 주세요.");
+    err.textContent = "";
+
+    items.push({
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
+      name, menu, rating, review,
+      created_at: Date.now()
+    });
+    store.save(items);
+    $("form").reset();
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
