@@ -105,26 +105,33 @@
 
   .list-head { display: flex; justify-content: space-between; align-items: center; margin: 28px 0 12px; position: relative; }
   h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; }
-  .icon-btn {
-    background: var(--bg-layer); color: var(--fg-neutral-muted);
-    width: 40px; height: 40px; padding: 0; border-radius: 50%;
-    border: 1px solid var(--stroke-neutral-weak);
+  /* 검색·로그인 아이콘: 테두리 없이 포인트 색 */
+  .icon-btn, .user-btn {
+    background: transparent; color: var(--fg-brand);
+    width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%;
     display: grid; place-items: center; flex-shrink: 0;
   }
-  .icon-btn:hover { background: var(--bg-brand-weak); }
-  .icon-btn.on { background: var(--bg-brand-solid); border-color: var(--bg-brand-solid); color: var(--fg-neutral); }
-  .search-pop {
-    position: absolute; right: 0; top: 48px; z-index: 5;
-    width: min(240px, calc(100vw - 32px));
-    background: var(--bg-layer);
-    border: 1px solid var(--stroke-neutral-weak);
-    border-radius: var(--r-input);
-    box-shadow: var(--shadow-s3);
-    padding: 8px;
-    display: flex; gap: 6px; align-items: center;
+  .icon-btn:hover, .user-btn:hover { background: var(--bg-brand-weak); }
+  .icon-btn.on, .user-btn.on { background: var(--bg-brand-weak); }
+  /* 검색: 돋보기 옆에서 테두리 입력칸이 부드럽게 펼쳐진다 */
+  .search-wrap { display: flex; align-items: center; gap: 4px; }
+  .search-field {
+    position: relative; width: 0; opacity: 0; visibility: hidden; overflow: hidden;
+    transform: translateX(8px);
+    transition: width .28s ease, opacity .22s ease, transform .28s ease, visibility 0s .28s;
   }
-  .search-pop input { padding: 8px 12px; font-size: 15px; }
-  .search-pop .clear { background: transparent; color: var(--fg-neutral-subtle); padding: 6px 8px; }
+  .search-field.open {
+    width: min(220px, 52vw); opacity: 1; visibility: visible; transform: none;
+    transition: width .28s ease, opacity .22s ease, transform .28s ease, visibility 0s;
+  }
+  .search-field input { padding: 8px 32px 8px 12px; font-size: 15px; border-radius: 999px; }
+  .search-field .clear {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    background: transparent; color: var(--fg-neutral-subtle); padding: 4px 8px; font-size: 12px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .search-field, .search-field.open { transition: none; }
+  }
 
   /* 한 줄에 카드 두 장 */
   #list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0; margin: 0; list-style: none; align-items: start; }
@@ -149,14 +156,6 @@
   .empty { grid-column: 1 / -1; text-align: center; color: var(--fg-neutral-subtle); padding: 32px 0; font-size: 14px; }
 
   .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .user-btn {
-    background: var(--bg-layer); color: var(--fg-neutral-muted);
-    border: 1px solid var(--stroke-neutral-weak);
-    width: 42px; height: 42px; padding: 0; border-radius: 50%;
-    display: grid; place-items: center; flex-shrink: 0;
-  }
-  .user-btn:hover { background: var(--bg-brand-weak); }
-  .user-btn.on { background: var(--bg-brand-solid); border-color: var(--bg-brand-solid); color: var(--fg-neutral); }
   dialog {
     border: 0; border-radius: 20px; padding: 20px;
     width: min(92vw, 380px); color: var(--fg-neutral); background: var(--bg-layer);
@@ -174,6 +173,7 @@
     background: var(--bg-brand-solid); color: var(--fg-neutral); border-radius: 999px;
     padding: 2px 8px; font-size: 12px; margin-left: 6px; font-style: normal;
   }
+  .privacy-note { margin: 0; text-align: center; font-size: 11px; line-height: 15px; color: #b0b3ba; }
   .info { color: var(--fg-neutral-subtle); font-size: 13px; line-height: 18px; min-height: 18px; margin: 0; }
   [hidden] { display: none !important; }
 </style>
@@ -212,6 +212,7 @@
         <p class="error" id="authError" role="alert"></p>
         <p class="info" id="authInfo"></p>
         <button type="submit" class="add" id="authSubmit">로그인</button>
+        <p class="privacy-note">이름·이메일·전화번호 등 개인정보는 받지 않아요.</p>
       </form>
     </div>
 
@@ -254,15 +255,17 @@
   <div class="pane-list">
   <div class="list-head">
     <h2>등록된 맛집 <span class="count" id="count"></span></h2>
-    <button type="button" id="searchBtn" class="icon-btn" aria-label="검색" aria-expanded="false" title="검색">
-      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-        <circle cx="11" cy="11" r="7"></circle>
-        <path d="M20 20l-3.5-3.5"></path>
-      </svg>
-    </button>
-    <div class="search-pop" id="searchPop" hidden>
-      <input type="search" id="searchInput" placeholder="이름·메뉴·한줄평 검색" aria-label="맛집 검색" autocomplete="off">
-      <button type="button" class="clear" id="searchClear" aria-label="검색어 지우기">✕</button>
+    <div class="search-wrap">
+      <div class="search-field" id="searchField">
+        <input type="text" id="searchInput" placeholder="이름·메뉴·한줄평 검색" aria-label="맛집 검색" autocomplete="off">
+        <button type="button" class="clear" id="searchClear" aria-label="검색어 지우기">✕</button>
+      </div>
+      <button type="button" id="searchBtn" class="icon-btn" aria-label="검색" aria-expanded="false" title="검색">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="M20 20l-3.5-3.5"></path>
+        </svg>
+      </button>
     </div>
   </div>
   <ul id="list"></ul>
@@ -568,7 +571,7 @@
 
   // ----- 검색: 돋보기를 누르면 작은 입력창이 뜬다 (처음에는 숨김) -----
   function setSearchOpen(open) {
-    $("searchPop").hidden = !open;
+    $("searchField").classList.toggle("open", open);
     $("searchBtn").setAttribute("aria-expanded", open ? "true" : "false");
     if (open) $("searchInput").focus();
   }
@@ -577,9 +580,9 @@
   }
   $("searchBtn").addEventListener("click", (e) => {
     e.stopPropagation();
-    setSearchOpen($("searchPop").hidden);
+    setSearchOpen(!$("searchField").classList.contains("open"));
   });
-  $("searchPop").addEventListener("click", (e) => e.stopPropagation());
+  $("searchField").addEventListener("click", (e) => e.stopPropagation());
   $("searchInput").addEventListener("input", () => { updateSearchIcon(); page = 1; render(); });
   $("prevPage").addEventListener("click", () => { page -= 1; render(); });
   $("nextPage").addEventListener("click", () => { page += 1; render(); });
