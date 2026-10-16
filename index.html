@@ -49,12 +49,11 @@
   @media (min-width: 900px) {
     .wrap { max-width: 1080px; padding: 28px 24px 56px; }
     .layout { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 28px; align-items: start; }
-    /* 등록 폼 카드의 윗선을 오른쪽 첫 맛집 카드의 윗선에 맞춘다
-       (제목줄 위 여백 28px + 제목줄 높이 40px + 제목줄 아래 여백 12px) */
-    .pane-form { position: sticky; top: 20px; margin-top: 80px; }
+    /* 목록 제목줄이 없어졌으므로 폼 카드와 첫 맛집 카드의 윗선이 자연스럽게 같다 */
+    .pane-form { position: sticky; top: 20px; }
   }
   h1 { margin: 0; font-size: 22px; line-height: 30px; font-weight: 700; }
-  .sub { margin: 6px 0 20px; color: var(--fg-neutral-subtle); font-size: 14px; line-height: 19px; }
+  .sub { margin: 4px 0 20px; color: var(--fg-neutral-subtle); font-size: 14px; line-height: 19px; }
 
   form, .card {
     background: var(--bg-layer);
@@ -115,9 +114,12 @@
   .icon-btn:hover, .user-btn:hover { background: var(--bg-brand-weak); }
   .icon-btn.on, .user-btn.on { background: var(--bg-brand-weak); }
   /* 검색: 돋보기 옆에서 테두리 입력칸이 부드럽게 펼쳐진다 */
-  .search-wrap { display: flex; align-items: center; gap: 4px; }
+  .top-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .search-wrap { position: relative; display: flex; align-items: center; }
+  /* 입력칸은 돋보기 왼쪽으로 펼쳐지며 제목 위에 겹쳐 뜬다 (다른 요소가 밀리지 않게) */
   .search-field {
-    position: relative; width: 0; opacity: 0; visibility: hidden; overflow: hidden;
+    position: absolute; right: 42px; top: 50%; margin-top: -19px; z-index: 5;
+    width: 0; opacity: 0; visibility: hidden; overflow: hidden;
     transform: translateX(8px);
     transition: width .28s ease, opacity .22s ease, transform .28s ease, visibility 0s .28s;
   }
@@ -125,7 +127,23 @@
     width: min(220px, 52vw); opacity: 1; visibility: visible; transform: none;
     transition: width .28s ease, opacity .22s ease, transform .28s ease, visibility 0s;
   }
-  .search-field input { padding: 8px 32px 8px 12px; font-size: 15px; border-radius: 999px; }
+  .search-field input { padding: 8px 32px 8px 14px; font-size: 15px; border-radius: 999px; background: var(--bg-layer); box-shadow: var(--shadow-s1); }
+  .user-btn { position: relative; }
+  .dot {
+    position: absolute; top: 7px; right: 7px; width: 9px; height: 9px;
+    background: var(--fg-brand); border: 2px solid var(--bg-page); border-radius: 50%; box-sizing: content-box;
+  }
+  .pend { margin-left: 4px; font-size: 12px; background: var(--fg-brand); color: #fff; border-radius: 999px; padding: 0 6px; }
+  .pend:empty { display: none; }
+  .status-note { margin: 0 0 14px; padding: 8px 10px; font-size: 13px; line-height: 18px; background: var(--bg-brand-weak); color: var(--fg-brand-contrast); border-radius: 10px; }
+  .pending-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; max-height: 50vh; overflow: auto; }
+  .pending-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid var(--stroke-neutral-weak); border-radius: var(--r-input); }
+  .pending-list .who { min-width: 0; word-break: break-all; font-weight: 600; }
+  .pending-list .when { display: block; font-weight: 400; font-size: 12px; color: var(--fg-neutral-subtle); }
+  .pending-list .acts { display: flex; gap: 6px; flex-shrink: 0; }
+  .pending-list button { padding: 6px 12px; font-size: 13px; border-radius: 999px; }
+  .pending-list .ok { background: var(--bg-brand-solid); color: var(--fg-neutral); }
+  .pending-list .no { background: var(--bg-fill); color: var(--fg-neutral-muted); }
   .search-field .clear {
     position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
     background: transparent; color: var(--fg-neutral-subtle); padding: 4px 8px; font-size: 12px;
@@ -185,14 +203,29 @@
 <div class="wrap">
   <div class="top">
     <h1>🍜 우리동네 숨은맛집</h1>
-    <button type="button" id="userBtn" class="user-btn" aria-label="로그인" title="로그인">
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-        <circle cx="12" cy="8" r="4"></circle>
-        <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"></path>
-      </svg>
-    </button>
+    <div class="top-actions">
+      <div class="search-wrap">
+        <div class="search-field" id="searchField">
+          <input type="text" id="searchInput" placeholder="이름·메뉴·한줄평 검색" aria-label="맛집 검색" autocomplete="off">
+          <button type="button" class="clear" id="searchClear" aria-label="검색어 지우기">✕</button>
+        </div>
+        <button type="button" id="searchBtn" class="icon-btn" aria-label="검색" aria-expanded="false" title="검색">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="M20 20l-3.5-3.5"></path>
+          </svg>
+        </button>
+      </div>
+      <button type="button" id="userBtn" class="user-btn" aria-label="로그인" title="로그인">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"></path>
+        </svg>
+        <span class="dot" id="userDot" hidden></span>
+      </button>
+    </div>
   </div>
-  <p class="sub">가본 맛집을 기록해 두세요.</p>
+  <p class="sub">가본 맛집을 기록해 두세요. <span class="count" id="count"></span></p>
 
   <dialog id="authDialog" aria-labelledby="authTitle">
     <div class="dlg-head">
@@ -220,8 +253,19 @@
     </div>
 
     <div id="accountSection" hidden>
-      <p class="account"><b id="userName"></b><em class="badge" id="adminBadge" hidden>관리자</em> 님으로 로그인했어요.</p>
-      <button type="button" class="add" id="logout">로그아웃</button>
+      <div class="tabs" id="acctTabs" role="tablist" hidden>
+        <button type="button" class="tab" id="tabMine" role="tab" aria-selected="true">내 계정</button>
+        <button type="button" class="tab" id="tabApprove" role="tab" aria-selected="false">가입 승인<span class="pend" id="pendingCount"></span></button>
+      </div>
+      <div id="minePanel">
+        <p class="account"><b id="userName"></b><em class="badge" id="adminBadge" hidden>관리자</em> 님으로 로그인했어요.</p>
+        <p class="status-note" id="statusNote" hidden></p>
+        <button type="button" class="add" id="logout">로그아웃</button>
+      </div>
+      <div id="approvePanel" hidden>
+        <ul class="pending-list" id="pendingList"></ul>
+        <p class="info" id="approveMsg"></p>
+      </div>
     </div>
   </dialog>
 
@@ -256,21 +300,6 @@
   </div>
 
   <div class="pane-list">
-  <div class="list-head">
-    <h2>등록된 맛집 <span class="count" id="count"></span></h2>
-    <div class="search-wrap">
-      <div class="search-field" id="searchField">
-        <input type="text" id="searchInput" placeholder="이름·메뉴·한줄평 검색" aria-label="맛집 검색" autocomplete="off">
-        <button type="button" class="clear" id="searchClear" aria-label="검색어 지우기">✕</button>
-      </div>
-      <button type="button" id="searchBtn" class="icon-btn" aria-label="검색" aria-expanded="false" title="검색">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7"></circle>
-          <path d="M20 20l-3.5-3.5"></path>
-        </svg>
-      </button>
-    </div>
-  </div>
   <ul id="list"></ul>
   <nav class="pager" id="pager" aria-label="페이지" hidden>
     <button type="button" id="prevPage">이전</button>
@@ -369,6 +398,22 @@
         const rows = await call(SUPABASE_URL + "/rest/v1/admins?select=user_id");
         return Array.isArray(rows) && rows.length > 0;
       } catch { return false; }
+    },
+    // 내 가입 상태: pending(대기) / approved(승인) / rejected(거절)
+    async myStatus(userId) {
+      try {
+        const rows = await call(SUPABASE_URL + "/rest/v1/profiles?select=status&user_id=eq." + encodeURIComponent(userId));
+        return rows && rows[0] ? rows[0].status : null;
+      } catch { return null; }
+    },
+    // 관리자: 승인을 기다리는 가입 신청 (오래된 순)
+    pending() {
+      return call(SUPABASE_URL + "/rest/v1/profiles?select=user_id,login_id,created_at&status=eq.pending&order=created_at.asc");
+    },
+    setStatus(userId, status) {
+      return call(SUPABASE_URL + "/rest/v1/profiles?user_id=eq." + encodeURIComponent(userId), {
+        method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status })
+      });
     }
   };
 
@@ -506,6 +551,7 @@
   $("form").addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!session) return openAuth("맛집을 추가하려면 로그인해 주세요.");
+    if (myStatus !== "approved") return showAccount();
     const name = $("name").value.trim();
     const menu = $("menu").value.trim();
     const rating = Number($("rating").value);
@@ -546,6 +592,7 @@
 
   $("ai").addEventListener("click", async () => {
     if (!session) return openAuth("AI 추천은 로그인 후 이용할 수 있어요.");
+    if (myStatus !== "approved") return showAccount();
     const err = $("error");
     const name = $("name").value.trim();
     if (!name) { err.textContent = "AI 추천을 받으려면 식당 이름을 먼저 입력해 주세요."; return; }
@@ -635,6 +682,10 @@
     $("authInfo").textContent = message || "";
     if (!$("authDialog").open) $("authDialog").showModal();
   }
+  function showAccount() {
+    renderAccount();
+    if (!$("authDialog").open) $("authDialog").showModal();
+  }
   $("userBtn").addEventListener("click", () => {
     if (session) renderAccount();
     else setMode("login");
@@ -645,12 +696,85 @@
     if (e.target === $("authDialog")) $("authDialog").close();
   });
 
+  let myStatus = null;       // 내 가입 상태
+  let pendingRows = [];      // (관리자) 승인 대기 목록
+
+  const STATUS_NOTE = {
+    pending: "가입 신청이 접수됐어요. 관리자가 승인하면 맛집을 쓸 수 있어요.",
+    rejected: "가입이 승인되지 않았어요."
+  };
+
+  function setAcctTab(which) {
+    const approve = which === "approve";
+    $("tabMine").setAttribute("aria-selected", String(!approve));
+    $("tabApprove").setAttribute("aria-selected", String(approve));
+    $("minePanel").hidden = approve;
+    $("approvePanel").hidden = !approve;
+    $("authTitle").textContent = approve ? "가입 승인" : "내 계정";
+  }
+  $("tabMine").addEventListener("click", () => setAcctTab("mine"));
+  $("tabApprove").addEventListener("click", () => { setAcctTab("approve"); loadPending(); });
+
+  function renderPending() {
+    const ul = $("pendingList");
+    ul.replaceChildren();
+    $("pendingCount").textContent = pendingRows.length ? String(pendingRows.length) : "";
+    $("userDot").hidden = !(isAdmin && pendingRows.length);
+    if (!pendingRows.length) {
+      $("approveMsg").textContent = "승인을 기다리는 가입 신청이 없어요.";
+      return;
+    }
+    $("approveMsg").textContent = "";
+    for (const p of pendingRows) {
+      const li = document.createElement("li");
+      const who = document.createElement("div");
+      who.className = "who";
+      who.textContent = p.login_id;
+      const when = document.createElement("span");
+      when.className = "when";
+      when.textContent = new Date(p.created_at).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) + " 신청";
+      who.append(when);
+      const acts = document.createElement("div");
+      acts.className = "acts";
+      const ok = document.createElement("button");
+      ok.type = "button"; ok.className = "ok"; ok.textContent = "승인";
+      ok.addEventListener("click", () => decide(p.user_id, "approved", ok));
+      const no = document.createElement("button");
+      no.type = "button"; no.className = "no"; no.textContent = "거절";
+      no.addEventListener("click", () => decide(p.user_id, "rejected", no));
+      acts.append(ok, no);
+      li.append(who, acts);
+      ul.append(li);
+    }
+  }
+  async function loadPending() {
+    if (!isAdmin) return;
+    try { pendingRows = await store.pending(); }
+    catch { $("approveMsg").textContent = "목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."; return; }
+    renderPending();
+  }
+  async function decide(userId, status, btn) {
+    btn.disabled = true;
+    try {
+      await store.setStatus(userId, status);
+    } catch {
+      $("approveMsg").textContent = "처리하지 못했어요. 다시 시도해 주세요.";
+      btn.disabled = false;
+      return;
+    }
+    await loadPending();
+  }
+
   function renderAccount() {
-    $("authTitle").textContent = "내 계정";
     $("authSection").hidden = true;
     $("accountSection").hidden = false;
     $("userName").textContent = emailToId(session.user.email);
     $("adminBadge").hidden = !isAdmin;
+    const note = STATUS_NOTE[myStatus];
+    $("statusNote").hidden = !note || isAdmin;
+    $("statusNote").textContent = note || "";
+    $("acctTabs").hidden = !isAdmin;
+    setAcctTab("mine");
   }
 
   $("authForm").addEventListener("submit", async (e) => {
@@ -681,7 +805,7 @@
       }
       $("authForm").reset();
       await applyAuth();
-      $("authDialog").close();
+      if (session && myStatus === "approved") $("authDialog").close();
     } catch (err) {
       $("authError").textContent = authMessage(err);
     } finally {
@@ -696,7 +820,18 @@
   });
 
   async function applyAuth() {
+    myStatus = null;
+    pendingRows = [];
     isAdmin = session ? await store.checkAdmin() : false;
+    if (session) myStatus = await store.myStatus(session.user.id);
+    // 거절된 계정은 바로 로그아웃시키고 안내한다
+    let rejectedNote = "";
+    if (session && myStatus === "rejected") {
+      saveSession(null);
+      isAdmin = false;
+      myStatus = null;
+      rejectedNote = "이 아이디는 가입이 승인되지 않았어요.";
+    }
     const loggedIn = !!session;
     $("userBtn").classList.toggle("on", loggedIn);
     const label = loggedIn ? emailToId(session.user.email) + " (내 계정)" : "로그인";
@@ -704,10 +839,13 @@
     $("userBtn").setAttribute("aria-label", label);
     if (loggedIn) {
       renderAccount();
+      if (isAdmin) await loadPending(); else $("userDot").hidden = true;
     } else {
+      $("userDot").hidden = true;
       $("authTitle").textContent = "로그인";
       $("authSection").hidden = false;
       $("accountSection").hidden = true;
+      if (rejectedNote) { $("authError").textContent = rejectedNote; }
     }
     await refresh();
   }
