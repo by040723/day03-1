@@ -109,22 +109,45 @@
 </div>
 
 <script>
-  // 저장소 계층: 2단계에서 이 부분만 Supabase로 교체한다.
-  const KEY = "restaurants";
+  // 저장소 계층: Supabase REST API (공개 가능한 publishable 키만 사용)
+  const SUPABASE_URL = "https://fcbfuvcpxpndasmqtzen.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_ndO8v9FSGgoBbPSeGNTpRQ_eddx0Hk4";
+  const API = SUPABASE_URL + "/rest/v1/restaurants";
+  const HEADERS = {
+    apikey: SUPABASE_KEY,
+    Authorization: "Bearer " + SUPABASE_KEY,
+    "Content-Type": "application/json"
+  };
+  async function call(url, options) {
+    const res = await fetch(url, { ...options, headers: { ...HEADERS, ...(options && options.headers) } });
+    if (!res.ok) throw new Error("요청 실패 (" + res.status + ")");
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+  }
   const store = {
-    load() {
-      try {
-        const data = JSON.parse(localStorage.getItem(KEY));
-        return Array.isArray(data) ? data : [];
-      } catch { return []; }
+    list() {
+      return call(API + "?select=*&order=created_at.desc");
     },
-    save(items) {
-      localStorage.setItem(KEY, JSON.stringify(items));
+    add(item) {
+      return call(API, { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(item) });
+    },
+    remove(id) {
+      return call(API + "?id=eq." + encodeURIComponent(id), { method: "DELETE" });
     }
   };
 
   const $ = (id) => document.getElementById(id);
-  let items = store.load();
+  let items = [];
+
+  async function refresh() {
+    try {
+      items = await store.list();
+      $("error").textContent = "";
+    } catch (e) {
+      $("error").textContent = "목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.";
+    }
+    render();
+  }
 
   function render() {
     const list = $("list");
@@ -136,9 +159,8 @@
       list.append(li);
       return;
     }
-    // 새 기록이 맨 위
-    const sorted = [...items].sort((a, b) => b.created_at - a.created_at);
-    for (const r of sorted) {
+    // 서버에서 최신순(created_at desc)으로 받아 온다
+    for (const r of items) {
       const li = document.createElement("li");
       li.className = "card";
 
@@ -178,13 +200,17 @@
     }
   }
 
-  function remove(id) {
-    items = items.filter((r) => r.id !== id);
-    store.save(items);
-    render();
+  async function remove(id) {
+    try {
+      await store.remove(id);
+      $("error").textContent = "";
+    } catch (e) {
+      $("error").textContent = "삭제하지 못했어요. 다시 시도해 주세요.";
+    }
+    await refresh();
   }
 
-  $("form").addEventListener("submit", (e) => {
+  $("form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const name = $("name").value.trim();
     const menu = $("menu").value.trim();
@@ -200,17 +226,17 @@
     if (review.length > 100) return (err.textContent = "한줄평은 100자 이하로 입력해 주세요.");
     err.textContent = "";
 
-    items.push({
-      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
-      name, menu, rating, review,
-      created_at: Date.now()
-    });
-    store.save(items);
+    try {
+      await store.add({ name, menu, rating, review });
+    } catch (e) {
+      err.textContent = "저장하지 못했어요. 다시 시도해 주세요.";
+      return;
+    }
     $("form").reset();
-    render();
+    await refresh();
   });
 
-  render();
+  refresh();
 </script>
 </body>
 </html>
