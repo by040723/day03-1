@@ -84,12 +84,79 @@
   }
   .del:hover { background: #ffe6cc; }
   .empty { text-align: center; color: var(--muted); padding: 32px 0; }
+
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .top h1 { margin: 0; }
+  .user-btn {
+    background: var(--orange-soft); color: var(--orange-dark);
+    width: 42px; height: 42px; padding: 0; border-radius: 50%;
+    display: grid; place-items: center; flex-shrink: 0; position: relative;
+  }
+  .user-btn:hover { background: #ffe6cc; }
+  .user-btn.on { background: var(--orange); color: #fff; }
+  dialog {
+    border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+    width: min(92vw, 380px); color: var(--text); background: #fff;
+    box-shadow: 0 10px 30px rgba(60, 30, 5, .25);
+  }
+  dialog::backdrop { background: rgba(43, 33, 24, .45); }
+  .dlg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .close { background: transparent; color: var(--muted); padding: 4px 8px; }
+  .account { margin: 0 0 14px; word-break: break-all; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .tab { background: var(--orange-soft); color: var(--orange-dark); }
+  .tab[aria-selected="true"] { background: var(--orange); color: #fff; }
+  #authForm { display: grid; gap: 12px; }
+  .badge {
+    background: var(--orange); color: #fff; border-radius: 999px;
+    padding: 2px 8px; font-size: .75rem; margin-left: 6px;
+  }
+  .info { color: var(--muted); font-size: .85rem; min-height: 1.1em; margin: 0; }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🍜 우리동네 숨은맛집</h1>
+  <div class="top">
+    <h1>🍜 우리동네 숨은맛집</h1>
+    <button type="button" id="userBtn" class="user-btn" aria-label="로그인" title="로그인">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"></path>
+      </svg>
+    </button>
+  </div>
   <p class="sub">가본 맛집을 기록해 두세요.</p>
+
+  <dialog id="authDialog" aria-labelledby="authTitle">
+    <div class="dlg-head">
+      <b id="authTitle">로그인</b>
+      <button type="button" class="close" id="authClose" aria-label="닫기">✕</button>
+    </div>
+
+    <div id="authSection">
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab" id="tabLogin" role="tab" aria-selected="true">로그인</button>
+        <button type="button" class="tab" id="tabSignup" role="tab" aria-selected="false">회원가입</button>
+      </div>
+      <form id="authForm" autocomplete="on">
+        <label>아이디
+          <input id="authId" autocomplete="username" maxlength="20" placeholder="영문 소문자·숫자·_ 3~20자" required>
+        </label>
+        <label>비밀번호
+          <input type="password" id="authPw" minlength="6" autocomplete="current-password" placeholder="6자 이상" required>
+        </label>
+        <p class="error" id="authError" role="alert"></p>
+        <p class="info" id="authInfo"></p>
+        <button type="submit" class="add" id="authSubmit">로그인</button>
+      </form>
+    </div>
+
+    <div id="accountSection" hidden>
+      <p class="account"><b id="userName"></b><em class="badge" id="adminBadge" hidden>관리자</em> 님으로 로그인했어요.</p>
+      <button type="button" class="add" id="logout">로그아웃</button>
+    </div>
+  </dialog>
 
   <form id="form" autocomplete="off">
     <div class="row">
@@ -132,11 +199,68 @@
     Authorization: "Bearer " + SUPABASE_KEY,
     "Content-Type": "application/json"
   };
-  async function call(url, options) {
-    const res = await fetch(url, { ...options, headers: { ...HEADERS, ...(options && options.headers) } });
-    if (!res.ok) throw new Error("요청 실패 (" + res.status + ")");
+  // 로그인 세션 (브라우저에 저장, 막혀 있어도 동작하도록 try/catch)
+  const SESSION_KEY = "session";
+  let session = null;
+  let isAdmin = false;
+  try { session = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { session = null; }
+  function saveSession(s) {
+    session = s;
+    try {
+      if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+      else localStorage.removeItem(SESSION_KEY);
+    } catch {}
+  }
+  function toSession(d) {
+    return {
+      access_token: d.access_token,
+      refresh_token: d.refresh_token,
+      expires_at: d.expires_at || Math.floor(Date.now() / 1000) + (d.expires_in || 3600),
+      user: { id: d.user.id, email: d.user.email }
+    };
+  }
+  async function authCall(path, body) {
+    const res = await fetch(SUPABASE_URL + "/auth/v1" + path, {
+      method: "POST",
+      headers: { apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
     const text = await res.text();
-    return text ? JSON.parse(text) : null;
+    const data = text ? JSON.parse(text) : {};
+    if (!res.ok) {
+      const e = new Error(data.msg || data.error_description || data.message || "요청 실패");
+      e.code = data.error_code || data.code;
+      throw e;
+    }
+    return data;
+  }
+  async function refreshSession() {
+    if (!session || !session.refresh_token) return false;
+    try {
+      const d = await authCall("/token?grant_type=refresh_token", { refresh_token: session.refresh_token });
+      saveSession(toSession(d));
+      return true;
+    } catch {
+      saveSession(null);
+      return false;
+    }
+  }
+  async function call(url, options, retried) {
+    const headers = { ...HEADERS, ...(options && options.headers) };
+    if (session) headers.Authorization = "Bearer " + session.access_token;
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401 && session && !retried && (await refreshSession())) {
+      return call(url, options, true);
+    }
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch {}
+    if (!res.ok) {
+      const e = new Error("요청 실패 (" + res.status + ")");
+      if (data && typeof data.error === "string") e.serverMessage = data.error; // Edge Function의 안내 문구
+      throw e;
+    }
+    return data;
   }
   const store = {
     list() {
@@ -147,6 +271,12 @@
     },
     remove(id) {
       return call(API + "?id=eq." + encodeURIComponent(id), { method: "DELETE" });
+    },
+    async checkAdmin() {
+      try {
+        const rows = await call(SUPABASE_URL + "/rest/v1/admins?select=user_id");
+        return Array.isArray(rows) && rows.length > 0;
+      } catch { return false; }
     }
   };
 
@@ -196,7 +326,9 @@
       del.className = "del";
       del.textContent = "삭제";
       del.addEventListener("click", () => remove(r.id));
-      top.append(info, del);
+      top.append(info);
+      // 삭제는 본인이 쓴 글이거나 관리자일 때만 (DB 정책에서도 막는다)
+      if (session && (isAdmin || r.user_id === session.user.id)) top.append(del);
 
       const stars = document.createElement("p");
       stars.className = "stars";
@@ -226,6 +358,7 @@
 
   $("form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (!session) return openAuth("맛집을 추가하려면 로그인해 주세요.");
     const name = $("name").value.trim();
     const menu = $("menu").value.trim();
     const rating = Number($("rating").value);
@@ -264,6 +397,7 @@
   $("form").addEventListener("reset", () => setRating(""));
 
   $("ai").addEventListener("click", async () => {
+    if (!session) return openAuth("AI 추천은 로그인 후 이용할 수 있어요.");
     const err = $("error");
     const name = $("name").value.trim();
     if (!name) { err.textContent = "AI 추천을 받으려면 식당 이름을 먼저 입력해 주세요."; return; }
@@ -283,14 +417,128 @@
       if (!data || !data.review) throw new Error("empty");
       $("review").value = data.review;
     } catch (e) {
-      err.textContent = "AI 추천을 받지 못했어요. 잠시 후 다시 시도해 주세요.";
+      err.textContent = (e && e.serverMessage) || "AI 추천을 받지 못했어요. 잠시 후 다시 시도해 주세요.";
     } finally {
       btn.disabled = false;
       btn.textContent = "✨ AI 한줄평 추천";
     }
   });
 
-  refresh();
+  // ----- 로그인 / 회원가입 화면 -----
+  let mode = "login";
+  function setMode(m) {
+    mode = m;
+    $("tabLogin").setAttribute("aria-selected", m === "login");
+    $("tabSignup").setAttribute("aria-selected", m === "signup");
+    $("authSubmit").textContent = m === "login" ? "로그인" : "회원가입";
+    $("authPw").autocomplete = m === "login" ? "current-password" : "new-password";
+    $("authError").textContent = "";
+    $("authInfo").textContent = "";
+  }
+  $("tabLogin").addEventListener("click", () => setMode("login"));
+  $("tabSignup").addEventListener("click", () => setMode("signup"));
+
+  function authMessage(e) {
+    const m = (e.message || "").toLowerCase();
+    if (m.includes("invalid login")) return "아이디 또는 비밀번호가 맞지 않아요.";
+    if (m.includes("not confirmed")) return "아직 사용할 수 없는 계정이에요. 다시 가입해 주세요.";
+    if (m.includes("already")) return "이미 사용 중인 아이디예요. 다른 아이디를 써 주세요.";
+    if (m.includes("password")) return "비밀번호는 6자 이상으로 입력해 주세요.";
+    if (m.includes("rate") || m.includes("too many")) return "잠시 후 다시 시도해 주세요.";
+    return "처리하지 못했어요. 입력을 확인하고 다시 시도해 주세요.";
+  }
+
+  // 아이디는 내부적으로 가짜 이메일(아이디@idlogin.app)로 바꿔 Supabase Auth에 보낸다.
+  const ID_DOMAIN = "@idlogin.app";
+  const idToEmail = (id) => id + ID_DOMAIN;
+  const emailToId = (email) => String(email).replace(ID_DOMAIN, "");
+
+  function openAuth(message) {
+    setMode("login");
+    $("authInfo").textContent = message || "";
+    if (!$("authDialog").open) $("authDialog").showModal();
+  }
+  $("userBtn").addEventListener("click", () => {
+    if (session) renderAccount();
+    else setMode("login");
+    if (!$("authDialog").open) $("authDialog").showModal();
+  });
+  $("authClose").addEventListener("click", () => $("authDialog").close());
+  $("authDialog").addEventListener("click", (e) => {
+    if (e.target === $("authDialog")) $("authDialog").close();
+  });
+
+  function renderAccount() {
+    $("authTitle").textContent = "내 계정";
+    $("authSection").hidden = true;
+    $("accountSection").hidden = false;
+    $("userName").textContent = emailToId(session.user.email);
+    $("adminBadge").hidden = !isAdmin;
+  }
+
+  $("authForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = $("authId").value.trim().toLowerCase();
+    const password = $("authPw").value;
+    $("authError").textContent = "";
+    $("authInfo").textContent = "";
+    if (!/^[a-z0-9_]{3,20}$/.test(id)) {
+      $("authError").textContent = "아이디는 영문 소문자·숫자·_ 3~20자로 입력해 주세요.";
+      return;
+    }
+    const email = idToEmail(id);
+    $("authSubmit").disabled = true;
+    try {
+      if (mode === "signup") {
+        const d = await authCall("/signup", { email, password });
+        if (d.access_token) {
+          saveSession(toSession(d));
+        } else {
+          // 자동 인증이 되지 않은 경우: 바로 로그인 시도
+          const t = await authCall("/token?grant_type=password", { email, password });
+          saveSession(toSession(t));
+        }
+      } else {
+        const d = await authCall("/token?grant_type=password", { email, password });
+        saveSession(toSession(d));
+      }
+      $("authForm").reset();
+      await applyAuth();
+      $("authDialog").close();
+    } catch (err) {
+      $("authError").textContent = authMessage(err);
+    } finally {
+      $("authSubmit").disabled = false;
+    }
+  });
+
+  $("logout").addEventListener("click", async () => {
+    saveSession(null);
+    await applyAuth();
+    $("authDialog").close();
+  });
+
+  async function applyAuth() {
+    isAdmin = session ? await store.checkAdmin() : false;
+    const loggedIn = !!session;
+    $("userBtn").classList.toggle("on", loggedIn);
+    const label = loggedIn ? emailToId(session.user.email) + " (내 계정)" : "로그인";
+    $("userBtn").title = label;
+    $("userBtn").setAttribute("aria-label", label);
+    if (loggedIn) {
+      renderAccount();
+    } else {
+      $("authTitle").textContent = "로그인";
+      $("authSection").hidden = false;
+      $("accountSection").hidden = true;
+    }
+    await refresh();
+  }
+
+  (async () => {
+    if (session && session.expires_at < Math.floor(Date.now() / 1000) + 30) await refreshSession();
+    await applyAuth();
+  })();
 </script>
 </body>
 </html>

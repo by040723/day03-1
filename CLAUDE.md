@@ -11,9 +11,9 @@
 - 프런트엔드 전체는 `index.html` 하나입니다. npm, 번들러, 프레임워크 빌드 단계는 쓰지 않습니다.
 - 저장 방식은 단계별입니다. 1단계는 `localStorage`, 2단계는 이를 Supabase로 교체합니다. 교체할 때 UI 코드를 건드리지 않도록 저장소 접근은 작은 계층 뒤에 두세요.
 - `restaurants` 표: `id`, `name`(필수, 30자 이하), `menu`(30자 이하), `rating`(필수, 1~5), `review`(100자 이하), `created_at`(자동). 이 제한은 UI뿐 아니라 DB CHECK 제약조건으로도 막습니다.
-- 로그인은 없습니다. RLS를 켜고, 누구나 조회·추가·삭제할 수 있는 정책을 둡니다.
+- (PRD 이후 변경) Supabase Auth 이메일/비밀번호 로그인·회원가입이 있습니다. 조회는 누구나, 추가는 로그인한 회원, 삭제는 본인 글 또는 `admins` 표에 등록된 관리자만 가능합니다(RLS). `restaurants.user_id`가 작성자입니다.
 - AI 한줄평: `verify_jwt`를 끈 Supabase Edge Function 1개가 모델 `openrouter/free`로 OpenRouter를 호출합니다. 출력은 한국어 한 문장, 40자 이내여야 합니다. 키는 Supabase Secrets의 `OPENROUTER_API_KEY`에만 두고, 코드나 저장소에는 절대 넣지 않습니다.
-- 목록은 새 기록이 맨 위(최신순)입니다. 하지 않을 것: 로그인, 수정, 사진 업로드, 검색.
+- 목록은 새 기록이 맨 위(최신순)입니다. 하지 않을 것: 수정, 사진 업로드, 검색.
 - 배포: GitHub → Vercel. UI는 따뜻한 주황색 포인트의 깔끔한 카드이며, 휴대폰 폭에서도 잘 보여야 합니다.
 
 ## 참고
