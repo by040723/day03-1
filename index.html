@@ -5,45 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>우리동네 숨은맛집</title>
 <style>
+  /* 역할 기반 색 토큰: 포인트는 연한 하늘색, 배경은 아주 연한 노랑 */
   :root {
-    --orange: #f97316;
-    --orange-dark: #ea580c;
-    --orange-soft: #fff4e8;
-    --text: #2b2118;
-    --muted: #8a7968;
-    --line: #f0e4d6;
-    --bg: #fffaf4;
+    --bg-page: #f6f2e4;
+    --bg-layer: #ffffff;
+    --bg-fill: #f7f8f9;
+    --bg-brand-solid: #8fd0f3;
+    --bg-brand-solid-pressed: #6dbdea;
+    --bg-brand-weak: #eaf6fd;
+    --bg-brand-weak-pressed: #d8eefb;
+    --fg-neutral: #1a1c20;
+    --fg-neutral-muted: #555d6d;
+    --fg-neutral-subtle: #868b94;
+    --fg-brand: #2b8fc6;
+    --fg-brand-contrast: #0f4c6b;
+    --fg-critical: #ca1d13;
+    --stroke-neutral-weak: #e6e8ec;
+    --stroke-focus-ring: #5e98fe;
+    --shadow-s1: 0 1px 4px rgba(0, 0, 0, .08);
+    --shadow-s3: 0 4px 16px rgba(0, 0, 0, .12);
+    --r-input: 12px;
+    --r-card: 16px;
+    --font: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", "Malgun Gothic", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: -apple-system, "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    font-family: var(--font);
+    font-size: 16px; line-height: 22px;
+    background: var(--bg-page);
+    color: var(--fg-neutral);
   }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { margin: 0 0 4px; font-size: 1.6rem; color: var(--orange-dark); }
-  .sub { margin: 0 0 20px; color: var(--muted); font-size: .95rem; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 56px; }
+  h1 { margin: 0; font-size: 22px; line-height: 30px; font-weight: 700; }
+  .sub { margin: 6px 0 20px; color: var(--fg-neutral-subtle); font-size: 14px; line-height: 19px; }
 
   form, .card {
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(120, 70, 20, .06);
+    background: var(--bg-layer);
+    border: 1px solid var(--stroke-neutral-weak);
+    border-radius: var(--r-card);
+    box-shadow: var(--shadow-s1);
   }
-  form { padding: 16px; display: grid; gap: 12px; }
-  label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; }
+  form { padding: 16px; display: grid; gap: 14px; }
+  label { display: grid; gap: 6px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--fg-neutral-muted); }
   input, select {
-    font: inherit; font-weight: 400;
-    padding: 10px 12px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: #fff;
-    color: var(--text);
+    font: inherit; font-size: 16px; font-weight: 400;
+    padding: 11px 14px;
+    border: 1px solid var(--stroke-neutral-weak);
+    border-radius: var(--r-input);
+    background: var(--bg-layer);
+    color: var(--fg-neutral);
     width: 100%;
   }
+  input::placeholder { color: #b0b3ba; }
   input:focus, select:focus, button:focus-visible {
-    outline: 2px solid var(--orange);
+    outline: 2px solid var(--stroke-focus-ring);
     outline-offset: 1px;
   }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -51,67 +67,99 @@
 
   button {
     font: inherit; font-weight: 600; cursor: pointer;
-    border: 0; border-radius: 10px; padding: 11px 16px;
+    border: 0; border-radius: var(--r-input); padding: 12px 16px;
+    transition: background-color .12s ease;
   }
-  .add { background: var(--orange); color: #fff; }
-  .add:hover { background: var(--orange-dark); }
-  .field { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; }
+  .add { background: var(--bg-brand-solid); color: var(--fg-neutral); }
+  .add:hover:not(:disabled) { background: var(--bg-brand-solid-pressed); }
+  .add:disabled { opacity: .6; cursor: wait; }
+  .field { display: grid; gap: 6px; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--fg-neutral-muted); }
   .rating-btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
   .star-btn {
-    background: #fff; color: var(--muted);
-    border: 1px solid var(--line); padding: 10px 0;
+    background: var(--bg-layer); color: var(--fg-neutral-muted);
+    border: 1px solid var(--stroke-neutral-weak); padding: 10px 0;
   }
-  .star-btn:hover { border-color: var(--orange); color: var(--orange-dark); }
+  .star-btn:hover { background: var(--bg-brand-weak); }
   .star-btn[aria-checked="true"] {
-    background: var(--orange); border-color: var(--orange); color: #fff;
+    background: var(--bg-brand-solid); border-color: var(--bg-brand-solid); color: var(--fg-neutral);
   }
-  .ai { background: var(--orange-soft); color: var(--orange-dark); }
-  .ai:hover:not(:disabled) { background: #ffe6cc; }
+  .ai { background: var(--bg-brand-weak); color: var(--fg-brand-contrast); }
+  .ai:hover:not(:disabled) { background: var(--bg-brand-weak-pressed); }
   .ai:disabled { opacity: .6; cursor: wait; }
-  .error { color: #c2410c; font-size: .85rem; min-height: 1.1em; margin: 0; }
+  .error { color: var(--fg-critical); font-size: 13px; line-height: 18px; min-height: 18px; margin: 0; }
 
-  h2 { margin: 28px 0 12px; font-size: 1.1rem; }
-  #list { display: grid; gap: 12px; padding: 0; margin: 0; list-style: none; }
-  .card { padding: 14px 16px; }
-  .card-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
-  .name { font-size: 1.1rem; font-weight: 700; margin: 0; word-break: break-word; }
-  .menu { color: var(--muted); font-size: .9rem; margin: 2px 0 0; word-break: break-word; }
-  .stars { color: var(--orange); letter-spacing: 1px; margin: 8px 0 0; }
-  .review { margin: 6px 0 0; word-break: break-word; }
-  .del {
-    background: var(--orange-soft); color: var(--orange-dark);
-    padding: 6px 12px; font-size: .85rem; flex-shrink: 0;
+  .list-head { display: flex; justify-content: space-between; align-items: center; margin: 28px 0 12px; position: relative; }
+  h2 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; }
+  .icon-btn {
+    background: var(--bg-layer); color: var(--fg-neutral-muted);
+    width: 40px; height: 40px; padding: 0; border-radius: 50%;
+    border: 1px solid var(--stroke-neutral-weak);
+    display: grid; place-items: center; flex-shrink: 0;
   }
-  .del:hover { background: #ffe6cc; }
-  .empty { text-align: center; color: var(--muted); padding: 32px 0; }
+  .icon-btn:hover { background: var(--bg-brand-weak); }
+  .icon-btn.on { background: var(--bg-brand-solid); border-color: var(--bg-brand-solid); color: var(--fg-neutral); }
+  .search-pop {
+    position: absolute; right: 0; top: 48px; z-index: 5;
+    width: min(240px, calc(100vw - 32px));
+    background: var(--bg-layer);
+    border: 1px solid var(--stroke-neutral-weak);
+    border-radius: var(--r-input);
+    box-shadow: var(--shadow-s3);
+    padding: 8px;
+    display: flex; gap: 6px; align-items: center;
+  }
+  .search-pop input { padding: 8px 12px; font-size: 15px; }
+  .search-pop .clear { background: transparent; color: var(--fg-neutral-subtle); padding: 6px 8px; }
+
+  /* 한 줄에 카드 두 장 */
+  #list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 0; margin: 0; list-style: none; align-items: start; }
+  .card { padding: 14px; display: flex; flex-direction: column; min-width: 0; }
+  .card-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+  .info-col { min-width: 0; }
+  .name { font-size: 16px; line-height: 22px; font-weight: 700; margin: 0; word-break: break-word; }
+  .menu { color: var(--fg-neutral-muted); font-size: 13px; line-height: 18px; margin: 2px 0 0; word-break: break-word; }
+  .food-emoji { font-size: 26px; line-height: 30px; flex-shrink: 0; }
+  .stars { color: var(--fg-brand); letter-spacing: 1px; margin: 8px 0 0; font-size: 14px; }
+  .review {
+    margin: 10px 0 0; word-break: break-word; font-size: 14px; line-height: 20px;
+    background: var(--bg-brand-weak); color: var(--fg-brand-contrast);
+    border-radius: 10px; padding: 8px 10px;
+  }
+  .del {
+    background: var(--bg-fill); color: var(--fg-neutral-muted);
+    padding: 6px 12px; font-size: 13px; border-radius: 999px;
+    align-self: flex-end; margin-top: 10px;
+  }
+  .del:hover { background: var(--bg-brand-weak); }
+  .empty { grid-column: 1 / -1; text-align: center; color: var(--fg-neutral-subtle); padding: 32px 0; font-size: 14px; }
 
   .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .top h1 { margin: 0; }
   .user-btn {
-    background: var(--orange-soft); color: var(--orange-dark);
+    background: var(--bg-layer); color: var(--fg-neutral-muted);
+    border: 1px solid var(--stroke-neutral-weak);
     width: 42px; height: 42px; padding: 0; border-radius: 50%;
-    display: grid; place-items: center; flex-shrink: 0; position: relative;
+    display: grid; place-items: center; flex-shrink: 0;
   }
-  .user-btn:hover { background: #ffe6cc; }
-  .user-btn.on { background: var(--orange); color: #fff; }
+  .user-btn:hover { background: var(--bg-brand-weak); }
+  .user-btn.on { background: var(--bg-brand-solid); border-color: var(--bg-brand-solid); color: var(--fg-neutral); }
   dialog {
-    border: 1px solid var(--line); border-radius: 14px; padding: 16px;
-    width: min(92vw, 380px); color: var(--text); background: #fff;
-    box-shadow: 0 10px 30px rgba(60, 30, 5, .25);
+    border: 0; border-radius: 20px; padding: 20px;
+    width: min(92vw, 380px); color: var(--fg-neutral); background: var(--bg-layer);
+    box-shadow: var(--shadow-s3);
   }
-  dialog::backdrop { background: rgba(43, 33, 24, .45); }
-  .dlg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .close { background: transparent; color: var(--muted); padding: 4px 8px; }
-  .account { margin: 0 0 14px; word-break: break-all; }
-  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-  .tab { background: var(--orange-soft); color: var(--orange-dark); }
-  .tab[aria-selected="true"] { background: var(--orange); color: #fff; }
-  #authForm { display: grid; gap: 12px; }
+  dialog::backdrop { background: rgba(0, 0, 0, .45); }
+  .dlg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; font-size: 18px; }
+  .close { background: transparent; color: var(--fg-neutral-subtle); padding: 4px 8px; }
+  .account { margin: 0 0 16px; word-break: break-all; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .tab { background: var(--bg-fill); color: var(--fg-neutral-muted); }
+  .tab[aria-selected="true"] { background: var(--bg-brand-solid); color: var(--fg-neutral); }
+  #authForm { display: grid; gap: 12px; padding: 0; border: 0; box-shadow: none; background: none; }
   .badge {
-    background: var(--orange); color: #fff; border-radius: 999px;
-    padding: 2px 8px; font-size: .75rem; margin-left: 6px;
+    background: var(--bg-brand-solid); color: var(--fg-neutral); border-radius: 999px;
+    padding: 2px 8px; font-size: 12px; margin-left: 6px; font-style: normal;
   }
-  .info { color: var(--muted); font-size: .85rem; min-height: 1.1em; margin: 0; }
+  .info { color: var(--fg-neutral-subtle); font-size: 13px; line-height: 18px; min-height: 18px; margin: 0; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -185,7 +233,19 @@
     <button type="submit" class="add">추가</button>
   </form>
 
-  <h2>등록된 맛집</h2>
+  <div class="list-head">
+    <h2>등록된 맛집</h2>
+    <button type="button" id="searchBtn" class="icon-btn" aria-label="검색" aria-expanded="false" title="검색">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle>
+        <path d="M20 20l-3.5-3.5"></path>
+      </svg>
+    </button>
+    <div class="search-pop" id="searchPop" hidden>
+      <input type="search" id="searchInput" placeholder="이름·메뉴·한줄평 검색" aria-label="맛집 검색" autocomplete="off">
+      <button type="button" class="clear" id="searchClear" aria-label="검색어 지우기">✕</button>
+    </div>
+  </div>
   <ul id="list"></ul>
 </div>
 
@@ -296,21 +356,27 @@
   function render() {
     const list = $("list");
     list.replaceChildren();
-    if (!items.length) {
+    const q = $("searchInput").value.trim().toLowerCase();
+    const shown = !q ? items : items.filter((r) =>
+      [r.name, r.menu, r.review].some((v) => String(v || "").toLowerCase().includes(q)));
+    if (!shown.length) {
       const li = document.createElement("li");
       li.className = "empty";
-      li.textContent = "아직 등록된 맛집이 없어요. 첫 맛집을 추가해 보세요!";
+      li.textContent = q
+        ? "검색 결과가 없어요. 다른 단어로 찾아 보세요."
+        : "아직 등록된 맛집이 없어요. 첫 맛집을 추가해 보세요!";
       list.append(li);
       return;
     }
     // 서버에서 최신순(created_at desc)으로 받아 온다
-    for (const r of items) {
+    for (const r of shown) {
       const li = document.createElement("li");
       li.className = "card";
 
       const top = document.createElement("div");
       top.className = "card-top";
       const info = document.createElement("div");
+      info.className = "info-col";
       const name = document.createElement("p");
       name.className = "name";
       name.textContent = r.name;
@@ -321,14 +387,12 @@
         menu.textContent = r.menu;
         info.append(menu);
       }
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "del";
-      del.textContent = "삭제";
-      del.addEventListener("click", () => remove(r.id));
-      top.append(info);
-      // 삭제는 본인이 쓴 글이거나 관리자일 때만 (DB 정책에서도 막는다)
-      if (session && (isAdmin || r.user_id === session.user.id)) top.append(del);
+      // 오른쪽 위: 음식 종류를 나타내는 이모지
+      const emoji = document.createElement("span");
+      emoji.className = "food-emoji";
+      emoji.textContent = foodEmoji(r);
+      emoji.setAttribute("aria-hidden", "true");
+      top.append(info, emoji);
 
       const stars = document.createElement("p");
       stars.className = "stars";
@@ -342,8 +406,37 @@
         review.textContent = r.review;
         li.append(review);
       }
+      // 삭제는 본인이 쓴 글이거나 관리자일 때만 (DB 정책에서도 막는다)
+      if (session && (isAdmin || r.user_id === session.user.id)) {
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "del";
+        del.textContent = "삭제";
+        del.addEventListener("click", () => remove(r.id));
+        li.append(del);
+      }
       list.append(li);
     }
+  }
+
+  // 이름·메뉴의 낱말로 음식 이모지를 고른다 (앞에 있는 규칙이 우선).
+  const FOOD_EMOJI = [
+    [/햄버거|버거/, "🍔"], [/피자/, "🍕"], [/파스타|스파게티|리조또/, "🍝"],
+    [/치킨|닭|통닭/, "🍗"], [/초밥|스시|사시미|회|횟집|오마카세/, "🍣"],
+    [/족발|보쌈/, "🍖"], [/삼겹|갈비|고기|구이|불고기|바베큐|스테이크|곱창|막창/, "🥩"],
+    [/국밥|찌개|전골|탕|해장/, "🍲"], [/라멘|라면|우동|칼국수|국수|냉면|쌀국수|면|소바/, "🍜"],
+    [/김밥|분식|떡볶이|순대|튀김|어묵/, "🍢"], [/덮밥|비빔밥|볶음밥|백반|한식|밥/, "🍚"],
+    [/카레/, "🍛"], [/만두|딤섬|교자/, "🥟"], [/짜장|짬뽕|탕수육|중식|중국/, "🥡"],
+    [/샌드위치|토스트|브런치/, "🥪"], [/타코|멕시/, "🌮"], [/샐러드|채식|비건/, "🥗"],
+    [/새우|게장|조개|해산물|낙지|오징어|꽃게|랍스터/, "🦐"],
+    [/아이스크림|빙수|젤라또/, "🍨"], [/케이크|디저트|마카롱|와플|도넛/, "🍰"],
+    [/빵|베이커리|베이글|크루아상/, "🥐"], [/커피|카페|라떼|에스프레소/, "☕"],
+    [/맥주|호프|소주|주점|포차|이자카야|와인|술집/, "🍺"]
+  ];
+  function foodEmoji(r) {
+    const text = (r.name || "") + " " + (r.menu || "");
+    for (const [re, emoji] of FOOD_EMOJI) if (re.test(text)) return emoji;
+    return "🍽️";
   }
 
   async function remove(id) {
@@ -423,6 +516,32 @@
       btn.textContent = "✨ AI 한줄평 추천";
     }
   });
+
+  // ----- 검색: 돋보기를 누르면 작은 입력창이 뜬다 (처음에는 숨김) -----
+  function setSearchOpen(open) {
+    $("searchPop").hidden = !open;
+    $("searchBtn").setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) $("searchInput").focus();
+  }
+  function updateSearchIcon() {
+    $("searchBtn").classList.toggle("on", !!$("searchInput").value.trim());
+  }
+  $("searchBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    setSearchOpen($("searchPop").hidden);
+  });
+  $("searchPop").addEventListener("click", (e) => e.stopPropagation());
+  $("searchInput").addEventListener("input", () => { updateSearchIcon(); render(); });
+  $("searchInput").addEventListener("keydown", (e) => {
+    if (e.key === "Escape" || e.key === "Enter") { e.preventDefault(); setSearchOpen(false); $("searchBtn").focus(); }
+  });
+  $("searchClear").addEventListener("click", () => {
+    $("searchInput").value = "";
+    updateSearchIcon();
+    render();
+    $("searchInput").focus();
+  });
+  document.addEventListener("click", () => setSearchOpen(false));
 
   // ----- 로그인 / 회원가입 화면 -----
   let mode = "login";
